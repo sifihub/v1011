@@ -571,7 +571,7 @@ class ZaraAI:
     def _ask_browser_llm(self, prompt: str, prefer: str = "deepseek") -> Optional[str]:
         if self.dry_run or self.browser.driver is None or not prompt.strip():
             return None
-        ordered = ["deepseek", "gemini", "chatgpt"]
+        ordered = ["gemini", "chatgpt", "deepseek"]
         for target in ordered:
             if target == "gemini" and getattr(self, "gemini_available", False):
                 if not self._restore_site_session("gemini", reason="browser_llm"):

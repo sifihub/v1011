@@ -80,7 +80,7 @@ sources = [
     os.environ.get("ZARA_MODEL_QUICK", ""),
 ]
 for raw in sources:
-    for item in raw.replace("\n", ",").split(","):
+    for item in raw.replace("\n", ",").replace(" ", ",").split(","):
         model = item.strip()
         if not model or model in seen:
             continue

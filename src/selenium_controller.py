@@ -917,10 +917,10 @@ class SeleniumController:
         import difflib
         
         safe_text = " ".join(text.split())[:280]
-        handle = getattr(self, "handle", None)
+        handle = self._x_profile_handle()
         if not handle:
-            log.warning("No handle known, assuming post success without verification.")
-            return True
+            log.warning("No X handle known; post verification cannot run.")
+            return False
             
         log.info(f"Verifying post on profile: https://x.com/{handle}")
         try:
@@ -946,8 +946,8 @@ class SeleniumController:
             return False
             
         except Exception as e:
-            log.warning(f"Verification encountered error: {e}. Assuming success fallback.")
-            return True
+            log.warning("Verification encountered error: %s", e)
+            return False
 
     def post_to_twitter(self, text: str, media_paths: Optional[List[Path]] = None) -> bool:
         if self.driver is None or not self.is_session_alive() or not text.strip():

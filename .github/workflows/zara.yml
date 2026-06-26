@@ -29,9 +29,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RUN_HOURS: "4.0"
-  ZARA_MAX_RUNTIME_HOURS: "4.0"
-  ZARA_SHUTDOWN_MARGIN_SECONDS: "2400"
+  RUN_HOURS: "3.5"
+  ZARA_MAX_RUNTIME_HOURS: "3.5"
+  ZARA_SHUTDOWN_MARGIN_SECONDS: "1500"
   ZARA_X_POST_ATTEMPTS: "1"
   ZARA_REPO_TEMPLATE: "v{iteration}"
   ZARA_REPO_PRIVATE: "0"
@@ -72,7 +72,7 @@ env:
   ZARA_ALLOW_SIMULATED_TRENDS: "0"
   ZARA_SNAPSHOT_RETENTION: "8"
   ZARA_PRIMARY_MODEL: "qwen2.5:1.5b"
-  ZARA_OLLAMA_MODELS: "qwen2.5:1.5b deepseek-coder:1.3b qwen2.5:0.5b tinyllama"
+  ZARA_OLLAMA_MODELS: "qwen2.5:1.5b,deepseek-coder:1.3b,qwen2.5:0.5b,tinyllama"
   ZARA_BOOTSTRAP_MODELS: "qwen2.5:1.5b deepseek-coder:1.3b qwen2.5:0.5b tinyllama"
   ZARA_MODEL_DIRECTOR: "tinyllama"
   ZARA_MODEL_TREND: "tinyllama"
