@@ -903,7 +903,8 @@ class SeleniumController:
 
     def _x_profile_handle(self) -> str:
         raw = (
-            os.environ.get("ZARA_X_USERNAME", "")
+            os.environ.get("ZARA_X_HANDLE", "")
+            or os.environ.get("ZARA_X_USERNAME", "")
             or os.environ.get("TWITTER_USERNAME", "")
             or os.environ.get("X_USERNAME", "")
         )
@@ -1009,6 +1010,9 @@ class SeleniumController:
             post_timeout = 30
             if requested_media:
                 post_timeout = max(post_timeout, 120)
+                if not self._wait_for_media_ready(timeout=10):
+                    log.warning("Media preview disappeared before posting; skipping naked text")
+                    return False
             button = self._wait_for_enabled_post_button(timeout=post_timeout)
             if button is not None:
                 try:
@@ -1503,6 +1507,32 @@ class SeleniumController:
         return replies[:limit]
 
     @with_timeout(180, "reply_to_tweet timed out")
+    def _reply_to_tweet_intent(self, tweet_url: str, safe_text: str) -> bool:
+        match = re.search(r"/status/(\d+)", tweet_url or "")
+        if self.driver is None or not match or not safe_text:
+            return False
+        import urllib.parse
+        try:
+            intent_url = f"https://x.com/intent/tweet?in_reply_to={match.group(1)}&text={urllib.parse.quote(safe_text)}"
+            self.driver.get(intent_url)
+            _delay(3, 5)
+            button = self._wait_for_enabled_post_button(timeout=30)
+            if button is None:
+                log.error("Reply intent button never became enabled")
+                return False
+            try:
+                self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", button)
+                self.driver.execute_script("arguments[0].click();", button)
+            except Exception:
+                button.click()
+            _delay(4, 6)
+            log.info("Reply submitted through X intent fallback")
+            return True
+        except Exception as intent_exc:
+            log.error("Reply intent fallback failed: %s", intent_exc)
+            return False
+
+    @with_timeout(180, "reply_to_tweet timed out")
     def reply_to_tweet(self, tweet_url: str, reply_text: str) -> bool:
         safe_text = " ".join(reply_text.split())[:280]
         if self.driver is None or not tweet_url or not safe_text:
@@ -1600,6 +1630,8 @@ class SeleniumController:
             return True
         except Exception as exc:
             log.error("Reply failed: %s", exc)
+            if "stale element reference" in str(exc).lower() and self._reply_to_tweet_intent(tweet_url, safe_text):
+                return True
             self._handle_browser_error("Reply to tweet", exc)
             return False
 

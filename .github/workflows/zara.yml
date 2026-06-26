@@ -51,6 +51,7 @@ env:
   ZARA_ENABLE_X_COMMENTS: "1"
   ZARA_ENABLE_X_REPLIES: "0"
   ZARA_ENABLE_TREND_COMMENTS: "1"
+  ZARA_X_HANDLE: "sifi_zara"
   ZARA_X_SEARCH_MODE: "top"
   ZARA_REQUIRE_MEDIA_FOR_X_POSTS: "1"
   ZARA_MIN_SOURCE_LIKES: "2200"
@@ -154,6 +155,7 @@ jobs:
             -e ZARA_X_USERNAME \
             -e ZARA_X_PASSWORD \
             -e ZARA_X_DM_PASSCODE \
+            -e ZARA_X_HANDLE="${{ env.ZARA_X_HANDLE }}" \
             -e ZARA_GOOGLE_EMAIL \
             -e ZARA_GOOGLE_PASSWORD \
             -e ZARA_PROTON_USERNAME \

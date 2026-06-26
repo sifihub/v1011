@@ -421,14 +421,14 @@ class ZaraAI:
             log.warning("Failed to stop browser prior to CPR repull: %s", stop_exc)
 
         # 2. Get credentials and URL
-        token = self.accounts.github_token
-        if not token:
-            log.warning("No GitHub token available for CPR repull")
-            return False
-
         repo_url = os.environ.get("ZARA_CHROMIUM_PROFILE_REPO", "https://github.com/sifihub/cpr.git")
-        quoted_token = urllib.parse.quote(token, safe="")
-        auth_url = repo_url.replace("https://", f"https://x-access-token:{quoted_token}@")
+        token = self.accounts.github_token or self.accounts.github_token_fg
+        if token:
+            quoted_token = urllib.parse.quote(token, safe="")
+            clone_url = repo_url.replace("https://", f"https://x-access-token:{quoted_token}@")
+        else:
+            log.warning("No GitHub token available for CPR repull; trying public clone")
+            clone_url = repo_url
 
         # 3. Re-clone using a temp dir to be safe
         try:
@@ -436,7 +436,7 @@ class ZaraAI:
                 temp_root = Path(temp_dir)
                 log.info("Cloning CPR profile repository dynamically...")
                 result = subprocess.run(
-                    ["git", "-c", "credential.helper=", "clone", "--depth=1", auth_url, "cpr_repo"],
+                    ["git", "-c", "credential.helper=", "clone", "--depth=1", clone_url, "cpr_repo"],
                     cwd=temp_root,
                     capture_output=True,
                     text=True,
