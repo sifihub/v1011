@@ -1629,9 +1629,11 @@ class SeleniumController:
             log.info("Reply submitted successfully on target tweet page")
             return True
         except Exception as exc:
+            if "stale element reference" in str(exc).lower():
+                log.warning("Reply composer went stale; trying X intent fallback")
+                if self._reply_to_tweet_intent(tweet_url, safe_text):
+                    return True
             log.error("Reply failed: %s", exc)
-            if "stale element reference" in str(exc).lower() and self._reply_to_tweet_intent(tweet_url, safe_text):
-                return True
             self._handle_browser_error("Reply to tweet", exc)
             return False
 
