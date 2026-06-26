@@ -1037,6 +1037,8 @@ class ZaraAI:
             key = self._source_key(card)
             if not key or key in seen:
                 return
+            if not self._candidate_is_fresh(card):
+                return
             seen.add(key)
             pool.append(card)
 
@@ -1222,6 +1224,25 @@ class ZaraAI:
         ]
         return " ".join(part for part in parts if part).strip()
 
+    def _candidate_is_fresh(self, candidate: dict) -> bool:
+        max_days = max(1, _env_int("ZARA_MAX_SOURCE_AGE_DAYS", 3))
+        created_at = str(candidate.get("created_at", "") or "").strip()
+        if created_at:
+            try:
+                source_time = datetime.fromisoformat(created_at.replace("Z", "+00:00")).replace(tzinfo=None)
+                return (datetime.utcnow() - source_time).days <= max_days
+            except Exception:
+                pass
+        query = str(candidate.get("source_query", "") or "")
+        match = re.search(r"\bsince:(\d{4}-\d{2}-\d{2})\b", query)
+        if not match:
+            return True
+        try:
+            since_date = datetime.strptime(match.group(1), "%Y-%m-%d")
+        except Exception:
+            return True
+        return (datetime.utcnow() - since_date).days <= max_days
+
     def _candidate_off_topic_reason(self, candidate: dict) -> str:
         blob = self._candidate_topic_blob(candidate)
         if not blob:
@@ -1279,6 +1300,8 @@ class ZaraAI:
 
     def _candidate_passes_quality(self, candidate: dict) -> bool:
 
+        if not self._candidate_is_fresh(candidate):
+            return False
         if not self._candidate_has_media(candidate):
             import random
             if random.randint(1, 1000) != 1:
@@ -1321,6 +1344,8 @@ class ZaraAI:
         return True
 
     def _candidate_passes_comment_quality(self, candidate: dict) -> bool:
+        if not self._candidate_is_fresh(candidate):
+            return False
         if not self._candidate_has_media(candidate):
             import random
             if random.randint(1, 1000) != 1:
@@ -2037,7 +2062,12 @@ class ZaraAI:
         mentions = self.browser.get_mentions(limit=10)
         replies = 0
         for mention in mentions[:5]:
-            if not mention.get("text") or not mention.get("url"):
+            mention_url = str(mention.get("url", "")).strip()
+            if not mention.get("text") or not mention_url:
+                continue
+            if mention_url in self.session_replied_urls:
+                continue
+            if self.memory.was_source_engaged(mention_url, "", mention["text"]):
                 continue
             if self._is_identity_bait(mention["text"]):
                 self._trace_runtime("mention_reply", "skipped", reason="identity_bait")
@@ -2053,11 +2083,19 @@ class ZaraAI:
             reply = self._with_topic_hashtags(reply, "discussion", limit=220, max_tags=2)
             if self._looks_like_recent_reply_text(reply):
                 continue
-            if self.dry_run or (self._restore_site_session("twitter", reason="mention_reply") and self.browser.reply_to_tweet(mention["url"], reply)):
+            self.session_replied_urls.add(mention_url)
+            if self.dry_run or (self._restore_site_session("twitter", reason="mention_reply") and self.browser.reply_to_tweet(mention_url, reply)):
                 self.memory.add_interaction(
                     user_handle=mention.get("user", "unknown"),
                     user_comment=mention["text"],
                     my_reply=reply,
+                )
+                self.memory.record_source_engagement(
+                    source_url=mention_url,
+                    image_url="",
+                    source_text=mention["text"],
+                    engagement_text=reply,
+                    metadata={"kind": "mention_reply", "iteration": self.iteration, "repo": self.current_repo},
                 )
                 replies += 1
         return replies

@@ -113,6 +113,7 @@ class ViralIntelligence:
                     ),
                     "source_query": item.get("query", ""),
                     "source_url": item.get("url", ""),
+                    "created_at": item.get("created_at", ""),
                     "author_handle": item.get("user", ""),
                     "source_text": text,
                     "image_url": item.get("image_url", ""),

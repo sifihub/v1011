@@ -932,7 +932,10 @@ class SeleniumController:
                 _delay(2, 4)
                 articles = self.driver.find_elements(By.CSS_SELECTOR, "article")
                 for article in articles[:5]:
-                    article_text = self._extract_tweet_text(article)
+                    try:
+                        article_text = self._extract_tweet_text(article)
+                    except StaleElementReferenceException:
+                        continue
                     if not article_text: continue
                     
                     ratio = difflib.SequenceMatcher(None, safe_text.lower(), article_text.lower()).ratio()
@@ -1098,6 +1101,7 @@ class SeleniumController:
                         "user": user,
                         "text": text,
                         "raw_text": raw_text,
+                        "created_at": self._extract_tweet_timestamp(article),
                         "url": link,
                         "image_url": media.get("media_url", ""),
                         "video_url": media.get("video_url", ""),
@@ -1231,6 +1235,18 @@ class SeleniumController:
                     continue
                 candidates.append(f"@{handle}")
         return candidates[0] if candidates else ""
+
+    def _extract_tweet_timestamp(self, article) -> str:
+        try:
+            for element in article.find_elements(By.CSS_SELECTOR, "time[datetime]"):
+                value = (element.get_attribute("datetime") or "").strip()
+                if value:
+                    return value
+        except StaleElementReferenceException:
+            return ""
+        except Exception:
+            return ""
+        return ""
 
     def _extract_tweet_text(self, article) -> str:
         selectors = [
