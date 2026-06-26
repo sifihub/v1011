@@ -1520,6 +1520,15 @@ class SeleniumController:
             
             box = self._find_first(["[data-testid='tweetTextarea_0']", "div[role='textbox']"], timeout=20)
             if box is None:
+                try:
+                    reply_buttons = self.driver.find_elements(By.CSS_SELECTOR, "[data-testid='reply']")
+                    if reply_buttons:
+                        self._safe_click(reply_buttons[0])
+                        _delay(2, 4)
+                        box = self._find_first(["[data-testid='tweetTextarea_0']", "div[role='textbox']"], timeout=15)
+                except Exception:
+                    box = None
+            if box is None:
                 log.error("Could not find reply composer on tweet page")
                 return False
                 
@@ -1580,8 +1589,9 @@ class SeleniumController:
             _delay(4, 6)
             
             try:
-                if button is not None and button.is_displayed():
-                    log.error("Reply button is still visible. Click failed to submit the comment.")
+                remaining = self._element_text_value(box)
+                if safe_text[:40] and safe_text[:40] in remaining:
+                    log.error("Reply composer still contains text after submit; comment was not posted.")
                     return False
             except Exception:
                 pass
