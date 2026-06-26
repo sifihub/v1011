@@ -131,6 +131,26 @@ def _looks_like_prompt_echo(text: str) -> bool:
     return any(re.search(pattern, cleaned, flags=re.IGNORECASE) for pattern in PROMPT_ECHO_PATTERNS)
 
 
+def _looks_like_public_fragment(text: str) -> bool:
+    compact = " ".join((text or "").split()).strip()
+    if not compact:
+        return True
+    lowered = compact.lower()
+    if compact[0] in ",.;:!?)]}":
+        return True
+    if lowered.startswith(("...", "and ", "but ", "or ", "because ", "while ", "which ", "that ")):
+        return True
+    if compact[0].islower():
+        return True
+    if compact.endswith("...") and compact[0].islower():
+        return True
+    if re.search(r"(?m)^\s{0,3}#{1,6}\s+\S", compact) or any(marker in compact for marker in ("```", "---", "**")):
+        return True
+    if re.search(r"\b(?:source post|recent posts to avoid|output only|voice rules?|predictive framework)\b", lowered):
+        return True
+    return False
+
+
 def _truncate(text: str, limit: int = 280) -> str:
     compact = " ".join((text or "").split())
     if len(compact) <= limit:
@@ -724,6 +744,8 @@ class ZaraAI:
         cleaned = re.sub(r"^[:\-\s]+", "", cleaned)
         cleaned = re.sub(r"[:\-\s]+$", "", cleaned)
         if cleaned.strip().upper() in {"SKIP", "NO REPLY", "IGNORE"}:
+            return ""
+        if _looks_like_public_fragment(cleaned):
             return ""
         if _looks_like_prompt_echo(cleaned):
             return ""
